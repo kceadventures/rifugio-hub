@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@theme {
+  /* Neutrals — Rifugio brand colors */
+  --color-ink: #3E2723;
+  --color-ink-muted: #4A3728;
+  --color-surface: #F2EDE3;
+  --color-surface-elevated: #FFFEF8;
+  --color-border: #E0D8CC;
+  --color-border-subtle: #EBE5DB;
+
+  /* Accent — Terra Cotta (unified CTA accent) */
+  --color-accent: #D4622A;
+  --color-accent-hover: #B85420;
+
+  /* Semantic */
+  --color-success: #256B4A;
+  --color-error: #5C2018;
+
+  /* Font families */
+  --font-display: "Crimson Text", Georgia, serif;
+  --font-body: "Instrument Sans", system-ui, sans-serif;
+}
+
+/* Location themes */
+[data-location="darling-hill"] {
+  --location-primary: #256B4A;
+  --location-primary-hover: #1E5A3C;
+  --location-text: #3E2723;
+  --location-secondary: #5C2018;
+}
+[data-location="litchfield-hills"] {
+  --location-primary: #7AA8D8;
+  --location-primary-hover: #5B8EC4;
+  --location-text: #1A1A6B;
+  --location-secondary: #2D2D7A;
+}
+
+/* Safe area insets for PWA */
+html {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent overscroll bounce on iOS */
+html, body {
+  overscroll-behavior: none;
+}
+
+/* Hide scrollbar on mobile but keep scrollable */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
