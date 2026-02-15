@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Hash } from 'lucide-react';
 import { useLocation } from '@/providers/location-provider';
-import { getPostsByLocation } from '@/lib/mock/mock-db';
+import { getPostsByLocation } from '@/lib/db';
 import { FeedCard } from '@/components/feed/feed-card';
 import { FeedSection } from '@/components/feed/feed-section';
 import { PinnedBanner } from '@/components/feed/pinned-banner';
@@ -17,11 +17,14 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentLocation) {
-      const fetchedPosts = getPostsByLocation(currentLocation.id);
-      setPosts(fetchedPosts);
-      setLoading(false);
+    async function load() {
+      if (currentLocation) {
+        const fetchedPosts = await getPostsByLocation(currentLocation.id);
+        setPosts(fetchedPosts);
+        setLoading(false);
+      }
     }
+    load();
   }, [currentLocation]);
 
   if (loading) {

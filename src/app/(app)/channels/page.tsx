@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLocation } from '@/providers/location-provider';
-import { getChannelsByLocation, getPostsByChannel } from '@/lib/mock/mock-db';
+import { getChannelsByLocation, getPostsByChannel } from '@/lib/db';
 import { ChannelListItem } from '@/components/channels/channel-list-item';
 import type { Channel, Post } from '@/lib/types';
 
@@ -13,20 +13,23 @@ export default function ChannelsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentLocation) {
-      const fetchedChannels = getChannelsByLocation(currentLocation.id);
-      setChannels(fetchedChannels);
+    async function load() {
+      if (currentLocation) {
+        const fetchedChannels = await getChannelsByLocation(currentLocation.id);
+        setChannels(fetchedChannels);
 
-      const postsMap = new Map<string, Post>();
-      fetchedChannels.forEach((channel) => {
-        const posts = getPostsByChannel(channel.id);
-        if (posts.length > 0) {
-          postsMap.set(channel.id, posts[0]);
+        const postsMap = new Map<string, Post>();
+        for (const channel of fetchedChannels) {
+          const posts = await getPostsByChannel(channel.id);
+          if (posts.length > 0) {
+            postsMap.set(channel.id, posts[0]);
+          }
         }
-      });
-      setChannelPosts(postsMap);
-      setLoading(false);
+        setChannelPosts(postsMap);
+        setLoading(false);
+      }
     }
+    load();
   }, [currentLocation]);
 
   if (loading) {

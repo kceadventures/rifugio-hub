@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getPost, getCommentsByPost, addComment } from '@/lib/mock/mock-db';
+import { getPost, getCommentsByPost, addComment } from '@/lib/db';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { PageHeader } from '@/components/layout/page-header';
 import { CommentList } from '@/components/comments/comment-list';
@@ -24,17 +24,20 @@ export default function PostDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchedPost = getPost(postId);
-    const fetchedComments = getCommentsByPost(postId);
-    setPost(fetchedPost || null);
-    setComments(fetchedComments);
-    setLoading(false);
+    async function load() {
+      const fetchedPost = await getPost(postId);
+      const fetchedComments = await getCommentsByPost(postId);
+      setPost(fetchedPost || null);
+      setComments(fetchedComments);
+      setLoading(false);
+    }
+    load();
   }, [postId]);
 
-  const handleCommentSubmit = (content: string) => {
+  const handleCommentSubmit = async (content: string) => {
     if (!user || !post) return;
 
-    const newComment = addComment({
+    const newComment = await addComment({
       post_id: post.id,
       author_id: user.id,
       body: content,

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { getConversationsForUser } from '@/lib/mock/mock-db';
+import { getConversationsForUser } from '@/lib/db';
 import { ConversationList } from '@/components/messages/conversation-list';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -16,11 +16,14 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      const fetchedConversations = getConversationsForUser(user.id);
-      setConversations(fetchedConversations);
-      setLoading(false);
+    async function load() {
+      if (user) {
+        const fetchedConversations = await getConversationsForUser(user.id);
+        setConversations(fetchedConversations);
+        setLoading(false);
+      }
     }
+    load();
   }, [user]);
 
   if (loading) {

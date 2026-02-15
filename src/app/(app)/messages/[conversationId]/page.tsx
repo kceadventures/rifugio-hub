@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { getMessagesByConversation, addMessage, getConversationsForUser } from '@/lib/mock/mock-db';
+import { getMessagesByConversation, addMessage, getConversationsForUser } from '@/lib/db';
 import { PageHeader } from '@/components/layout/page-header';
 import { MessageThread } from '@/components/messages/message-thread';
 import { MessageInput } from '@/components/messages/message-input';
@@ -19,21 +19,24 @@ export default function ConversationPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      const fetchedMessages = getMessagesByConversation(conversationId);
-      setMessages(fetchedMessages);
+    async function load() {
+      if (user) {
+        const fetchedMessages = await getMessagesByConversation(conversationId);
+        setMessages(fetchedMessages);
 
-      const conversations = getConversationsForUser(user.id);
-      const currentConv = conversations.find((c) => c.id === conversationId);
-      setConversation(currentConv || null);
-      setLoading(false);
+        const conversations = await getConversationsForUser(user.id);
+        const currentConv = conversations.find((c) => c.id === conversationId);
+        setConversation(currentConv || null);
+        setLoading(false);
+      }
     }
+    load();
   }, [conversationId, user]);
 
-  const handleSend = (content: string) => {
+  const handleSend = async (content: string) => {
     if (!user) return;
 
-    const newMessage = addMessage({
+    const newMessage = await addMessage({
       conversation_id: conversationId,
       sender_id: user.id,
       body: content,

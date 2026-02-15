@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Plus, Hash } from 'lucide-react';
 import Link from 'next/link';
-import { getPostsByChannel } from '@/lib/mock/mock-db';
+import { getPostsByChannel } from '@/lib/db';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { PageHeader } from '@/components/layout/page-header';
 import { PostCard } from '@/components/posts/post-card';
@@ -23,9 +23,12 @@ export default function ChannelPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchedPosts = getPostsByChannel(channelId);
-    setPosts(fetchedPosts);
-    setLoading(false);
+    async function load() {
+      const fetchedPosts = await getPostsByChannel(channelId);
+      setPosts(fetchedPosts);
+      setLoading(false);
+    }
+    load();
   }, [channelId]);
 
   if (loading) {

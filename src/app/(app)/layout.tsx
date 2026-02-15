@@ -15,7 +15,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="min-h-screen bg-surface"
-      data-location={currentLocation.color_theme ?? currentLocation.slug}
+      data-location={currentLocation?.color_theme ?? currentLocation?.slug ?? ''}
     >
       <TopBar onOpenLocationSwitcher={() => setIsLocationSwitcherOpen(true)} />
 

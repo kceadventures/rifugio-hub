@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useLocation } from '@/providers/location-provider';
-import { getProfilesByLocation, getOrCreateConversation } from '@/lib/mock/mock-db';
+import { getProfilesByLocation, getOrCreateConversation } from '@/lib/db';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -19,17 +19,20 @@ export default function MembersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentLocation) {
-      const fetchedMembers = getProfilesByLocation(currentLocation.id);
-      setMembers(fetchedMembers);
-      setLoading(false);
+    async function load() {
+      if (currentLocation) {
+        const fetchedMembers = await getProfilesByLocation(currentLocation.id);
+        setMembers(fetchedMembers);
+        setLoading(false);
+      }
     }
+    load();
   }, [currentLocation]);
 
-  const handleMemberClick = (member: Profile) => {
+  const handleMemberClick = async (member: Profile) => {
     if (!user || member.id === user.id) return;
 
-    const conversation = getOrCreateConversation(user.id, member.id);
+    const conversation = await getOrCreateConversation(user.id, member.id);
     router.push(`/messages/${conversation.id}`);
   };
 
