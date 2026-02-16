@@ -61,6 +61,20 @@ export async function getProfilesByLocation(
   return sb.getProfilesByLocation(locationId);
 }
 
+export async function getLocationsByUser(
+  userId: string
+): Promise<{ location_id: string; is_primary: boolean }[]> {
+  if (isDemoMode) {
+    // In demo mode, return mock member_locations
+    const { SEED_MEMBER_LOCATIONS } = await import("./mock/seed-data");
+    return SEED_MEMBER_LOCATIONS.filter((ml) => ml.profile_id === userId).map(
+      (ml) => ({ location_id: ml.location_id, is_primary: ml.is_primary })
+    );
+  }
+  const sb = await getSupabaseDb();
+  return sb.getLocationsByUser(userId);
+}
+
 // ── Channel queries ────────────────────────────────────────
 
 export async function getChannelsByLocation(

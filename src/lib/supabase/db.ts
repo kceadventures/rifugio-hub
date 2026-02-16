@@ -65,6 +65,16 @@ export async function getProfilesByLocation(locationId: string): Promise<Profile
   return (data ?? []).map((row: any) => row.profiles).flat().filter(Boolean) as Profile[];
 }
 
+export async function getLocationsByUser(userId: string): Promise<{ location_id: string; is_primary: boolean }[]> {
+  const { data, error } = await supabase
+    .from('member_locations')
+    .select('location_id, is_primary')
+    .eq('profile_id', userId);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 // ── Channel queries ────────────────────────────────────────
 
 export async function getChannelsByLocation(locationId: string): Promise<Channel[]> {

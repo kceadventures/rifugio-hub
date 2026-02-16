@@ -2,8 +2,7 @@
 
 import React, { createContext, useContext, useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/lib/hooks/use-auth";
-import { getLocations } from "@/lib/db";
-import { SEED_MEMBER_LOCATIONS } from "@/lib/mock/seed-data";
+import { getLocations, getLocationsByUser } from "@/lib/db";
 import type { Location } from "@/lib/types";
 
 interface LocationContextType {
@@ -19,38 +18,51 @@ const LocationContext = createContext<LocationContextType | undefined>(
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [allLocations, setAllLocations] = useState<Location[]>([]);
-  const [locationId, setLocationId] = useState<string>("loc-1");
+  const [memberLocationIds, setMemberLocationIds] = useState<
+    { location_id: string; is_primary: boolean }[]
+  >([]);
+  const [locationId, setLocationId] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
 
+  // Load locations and user's memberships
   useEffect(() => {
     async function load() {
-      const locations = await getLocations();
-      setAllLocations(locations);
+      try {
+        const locations = await getLocations();
+        setAllLocations(locations);
+
+        if (user) {
+          const memberships = await getLocationsByUser(user.id);
+          setMemberLocationIds(memberships);
+        }
+      } catch (err) {
+        console.error("Failed to load locations:", err);
+      }
       setLoaded(true);
     }
     load();
-  }, []);
+  }, [user]);
 
   const userLocations = useMemo(() => {
-    if (!user) return allLocations;
-    const ids = SEED_MEMBER_LOCATIONS.filter(
-      (ml) => ml.profile_id === user.id
-    ).map((ml) => ml.location_id);
-    return allLocations.filter((l) => ids.includes(l.id));
-  }, [user, allLocations]);
+    if (!user || memberLocationIds.length === 0) return allLocations;
+    const ids = memberLocationIds.map((ml) => ml.location_id);
+    const filtered = allLocations.filter((l) => ids.includes(l.id));
+    return filtered.length > 0 ? filtered : allLocations;
+  }, [user, allLocations, memberLocationIds]);
 
+  // Set default location when data loads
   useEffect(() => {
-    if (!loaded) return;
-    if (!user) {
-      setLocationId("loc-1");
-      return;
+    if (!loaded || allLocations.length === 0) return;
+
+    if (user && memberLocationIds.length > 0) {
+      const primary = memberLocationIds.find((ml) => ml.is_primary);
+      const defaultId =
+        primary?.location_id ?? memberLocationIds[0]?.location_id ?? allLocations[0]?.id;
+      setLocationId(defaultId);
+    } else {
+      setLocationId(allLocations[0]?.id ?? "");
     }
-    const primary = SEED_MEMBER_LOCATIONS.find(
-      (ml) => ml.profile_id === user.id && ml.is_primary
-    );
-    const defaultId = primary?.location_id ?? userLocations[0]?.id ?? "loc-1";
-    setLocationId(defaultId);
-  }, [user, userLocations, loaded]);
+  }, [user, memberLocationIds, allLocations, loaded]);
 
   const currentLocation =
     allLocations.find((l) => l.id === locationId) ?? allLocations[0] ?? null;
