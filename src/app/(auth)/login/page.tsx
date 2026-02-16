@@ -39,8 +39,29 @@ export default function LoginPage() {
         return;
       }
 
-      // Member verified - show success message
-      // In production, this would trigger magic link email send
+      // Member verified — send magic link via Supabase
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        email: email.toLowerCase().trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            full_name: data.name || email.split('@')[0],
+          },
+        },
+      });
+
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+        return;
+      }
+
       setSuccess(true);
       setLoading(false);
     } catch (err) {
