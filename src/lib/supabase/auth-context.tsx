@@ -32,8 +32,10 @@ export function SupabaseAuthProvider({
   const [user, setUser] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch profile from profiles table
-  const fetchProfile = useCallback(async (authUser: User) => {
+  // Fetch profile from profiles table.
+  // Retries once after a delay for new signups where the callback
+  // may not have created the profile yet.
+  const fetchProfile = useCallback(async (authUser: User, retries = 2) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
@@ -41,6 +43,10 @@ export function SupabaseAuthProvider({
       .single();
 
     if (error || !data) {
+      if (retries > 0) {
+        await new Promise((r) => setTimeout(r, 1000));
+        return fetchProfile(authUser, retries - 1);
+      }
       console.error("Failed to fetch profile:", error);
       setUser(null);
       return;
@@ -82,7 +88,7 @@ export function SupabaseAuthProvider({
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${redirectTo}/feed`,
+        emailRedirectTo: `${redirectTo}/auth/callback`,
       },
     });
 

@@ -201,7 +201,7 @@ export async function addComment(
   const { data, error } = await supabase
     .from('comments')
     .insert(insertData)
-    .select()
+    .select('*, author:profiles!author_id(*)')
     .single();
 
   if (error) throw error;
@@ -287,7 +287,7 @@ export async function addMessage(
   const { data, error } = await supabase
     .from('direct_messages')
     .insert(insertData)
-    .select()
+    .select('*, sender:profiles!sender_id(*)')
     .single();
 
   if (error) throw error;

@@ -4,14 +4,14 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Plus, Hash } from 'lucide-react';
 import Link from 'next/link';
-import { getPostsByChannel } from '@/lib/db';
+import { getPostsByChannel, getChannel } from '@/lib/db';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { PageHeader } from '@/components/layout/page-header';
 import { PostCard } from '@/components/posts/post-card';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { CHANNEL_META } from '@/lib/constants';
-import type { Post, ChannelCategory } from '@/lib/types';
+import type { Post, Channel, ChannelCategory } from '@/lib/types';
 
 export default function ChannelPage() {
   const params = useParams();
@@ -20,12 +20,17 @@ export default function ChannelPage() {
   const channelId = params.channelId as string;
 
   const [posts, setPosts] = useState<Post[]>([]);
+  const [channelData, setChannelData] = useState<Channel | undefined>();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const fetchedPosts = await getPostsByChannel(channelId);
+      const [fetchedPosts, fetchedChannel] = await Promise.all([
+        getPostsByChannel(channelId),
+        getChannel(channelId),
+      ]);
       setPosts(fetchedPosts);
+      setChannelData(fetchedChannel);
       setLoading(false);
     }
     load();
@@ -39,8 +44,8 @@ export default function ChannelPage() {
     );
   }
 
-  const channelMeta = CHANNEL_META[channelId as ChannelCategory];
-  const channelName = channelMeta?.label || 'Channel';
+  // Use the DB channel name, fall back to CHANNEL_META for demo mode, then 'Channel'
+  const channelName = channelData?.name || CHANNEL_META[channelId as ChannelCategory]?.label || 'Channel';
 
   return (
     <div className="min-h-screen pb-24">

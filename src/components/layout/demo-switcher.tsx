@@ -8,6 +8,8 @@ import { ROLE_LABELS } from '@/lib/constants';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
 export function DemoSwitcher() {
   const { user, switchUser } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -17,7 +19,7 @@ export function DemoSwitcher() {
     setIsExpanded(false);
   };
 
-  if (!user) return null;
+  if (!isDemoMode || !user) return null;
 
   return (
     <div className="fixed bottom-20 right-4 z-60">
