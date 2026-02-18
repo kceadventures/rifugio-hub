@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -7,7 +7,26 @@ export async function GET(request: NextRequest) {
   const token_hash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type");
 
-  const supabase = await createServerClient();
+  // Create the redirect response first so we can set cookies on it
+  const redirectUrl = new URL("/feed", requestUrl.origin);
+  const response = NextResponse.redirect(redirectUrl);
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
 
   if (code) {
     // PKCE flow — exchange code for session
@@ -63,6 +82,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Redirect to the feed
-  return NextResponse.redirect(new URL("/feed", requestUrl.origin));
+  return response;
 }
