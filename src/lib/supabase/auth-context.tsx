@@ -33,52 +33,84 @@ export function SupabaseAuthProvider({
   const [loading, setLoading] = useState(true);
 
   // Fetch profile from profiles table.
-  // Retries once after a delay for new signups where the callback
-  // may not have created the profile yet.
-  const fetchProfile = useCallback(async (authUser: User, retries = 2) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", authUser.id)
-      .single();
+  // Retries for new signups where the callback may still be creating the profile.
+  const fetchProfile = useCallback(async (authUser: User): Promise<Profile | null> => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", authUser.id)
+        .single();
 
-    if (error || !data) {
-      if (retries > 0) {
-        await new Promise((r) => setTimeout(r, 1000));
-        return fetchProfile(authUser, retries - 1);
+      if (data) return data as Profile;
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Profile fetch error:", error);
+        return null;
       }
-      console.error("Failed to fetch profile:", error);
-      setUser(null);
-      return;
+
+      // Profile not found yet — wait and retry (callback may still be creating it)
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 1000));
+      }
     }
 
-    setUser(data as Profile);
+    console.error("Profile not found after retries for user:", authUser.id);
+    return null;
   }, []);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      if (s?.user) {
-        fetchProfile(s.user);
-      }
-      setLoading(false);
-    });
+    let mounted = true;
 
-    // Listen for auth changes
+    async function init() {
+      try {
+        const { data: { session: s } } = await supabase.auth.getSession();
+
+        if (!mounted) return;
+
+        setSession(s);
+
+        if (s?.user) {
+          const profile = await fetchProfile(s.user);
+          if (mounted) {
+            setUser(profile);
+          }
+        }
+      } catch (err) {
+        console.error("Auth init error:", err);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    init();
+
+    // Listen for auth changes (sign in, sign out, token refresh)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
+    } = supabase.auth.onAuthStateChange(async (_event, s) => {
+      if (!mounted) return;
+
       setSession(s);
+
       if (s?.user) {
-        fetchProfile(s.user);
+        const profile = await fetchProfile(s.user);
+        if (mounted) {
+          setUser(profile);
+          setLoading(false);
+        }
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchProfile]);
 
   const signInWithMagicLink = useCallback(async (email: string) => {
