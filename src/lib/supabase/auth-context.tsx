@@ -33,29 +33,61 @@ export function SupabaseAuthProvider({
   const [loading, setLoading] = useState(true);
 
   // Fetch profile from profiles table.
-  // Retries for new signups where the callback may still be creating the profile.
+  // If profile doesn't exist (new user), auto-create it.
   const fetchProfile = useCallback(async (authUser: User): Promise<Profile | null> => {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const { data, error } = await supabase
+    // First attempt: just try to get the profile
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", authUser.id)
+      .single();
+
+    if (data) return data as Profile;
+
+    // Profile not found (PGRST116) — auto-create it
+    if (error && error.code === "PGRST116") {
+      const fullName =
+        (authUser.user_metadata?.full_name as string) ||
+        authUser.email?.split("@")[0] ||
+        "New Member";
+
+      const { error: insertError } = await supabase.from("profiles").insert({
+        id: authUser.id,
+        email: authUser.email,
+        full_name: fullName,
+        role: "member",
+      });
+
+      if (insertError) {
+        console.error("Auto-create profile error:", insertError);
+        return null;
+      }
+
+      // Also create location memberships
+      const { data: locations } = await supabase.from("locations").select("id");
+      if (locations && locations.length > 0) {
+        await supabase.from("member_locations").insert(
+          locations.map((loc: { id: string }, i: number) => ({
+            profile_id: authUser.id,
+            location_id: loc.id,
+            is_primary: i === 0,
+          }))
+        );
+      }
+
+      // Re-fetch the newly created profile
+      const { data: newProfile } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", authUser.id)
         .single();
 
-      if (data) return data as Profile;
-
-      if (error && error.code !== "PGRST116") {
-        console.error("Profile fetch error:", error);
-        return null;
-      }
-
-      // Profile not found yet — wait and retry (callback may still be creating it)
-      if (attempt < 2) {
-        await new Promise((r) => setTimeout(r, 1000));
-      }
+      return newProfile as Profile | null;
     }
 
-    console.error("Profile not found after retries for user:", authUser.id);
+    if (error) {
+      console.error("Profile fetch error:", error);
+    }
     return null;
   }, []);
 

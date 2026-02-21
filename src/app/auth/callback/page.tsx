@@ -62,11 +62,15 @@ export default function AuthCallbackPage() {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function ensureProfile(supabase: any, userId: string, email: string, metadata?: Record<string, unknown>) {
-  const { data: existingProfile } = await supabase
+  const { data: existingProfile, error: selectError } = await supabase
     .from('profiles')
     .select('id')
     .eq('id', userId)
     .single();
+
+  if (selectError && selectError.code !== 'PGRST116') {
+    console.error('ensureProfile select error:', selectError);
+  }
 
   if (existingProfile) return;
 
@@ -75,12 +79,17 @@ async function ensureProfile(supabase: any, userId: string, email: string, metad
     email.split('@')[0] ||
     'New Member';
 
-  await supabase.from('profiles').insert({
+  const { error: insertError } = await supabase.from('profiles').insert({
     id: userId,
     email,
     full_name: fullName,
     role: 'member',
   });
+
+  if (insertError) {
+    console.error('ensureProfile insert error:', insertError);
+    return;
+  }
 
   const { data: locations } = await supabase
     .from('locations')
@@ -93,6 +102,9 @@ async function ensureProfile(supabase: any, userId: string, email: string, metad
       is_primary: i === 0,
     }));
 
-    await supabase.from('member_locations').insert(memberships);
+    const { error: memberError } = await supabase.from('member_locations').insert(memberships);
+    if (memberError) {
+      console.error('ensureProfile member_locations insert error:', memberError);
+    }
   }
 }
