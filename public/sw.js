@@ -1,39 +1,8 @@
-const CACHE_NAME = "rifugio-shell-v1";
-const SHELL_ASSETS = ["/feed", "/channels", "/messages"];
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS))
-  );
-  self.skipWaiting();
-});
-
+// No-op service worker — unregisters itself and clears caches
+self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
-        )
-      )
+    caches.keys().then((names) => Promise.all(names.map((n) => caches.delete(n))))
   );
-  self.clients.claim();
-});
-
-self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
-
-  // Network-first for API and Supabase requests
-  if (url.pathname.startsWith("/api") || url.hostname.includes("supabase")) {
-    event.respondWith(fetch(event.request));
-    return;
-  }
-
-  // Cache-first for shell assets, network fallback
-  event.respondWith(
-    caches
-      .match(event.request)
-      .then((cached) => cached || fetch(event.request))
-  );
+  self.registration.unregister();
 });
